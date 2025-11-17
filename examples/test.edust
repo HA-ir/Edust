@@ -1,0 +1,162 @@
+// Example 1: Simple loop with print
+func main() {
+    let i = 0;
+    while i < 5 {
+        print(i);
+        i = i + 1;
+    }
+    return 0;
+}
+
+// Example 2: Factorial calculation
+/*
+func factorial(n) {
+    if n <= 1 {
+        return 1;
+    } else {
+        return n * factorial(n - 1);
+    }
+}
+
+func main() {
+    let result = factorial(5);
+    print(result);
+    return result;
+}
+*/
+
+// Example 3: Fibonacci sequence
+/*
+func fibonacci(n) {
+    if n <= 1 {
+        return n;
+    } else {
+        return fibonacci(n - 1) + fibonacci(n - 2);
+    }
+}
+
+func main() {
+    let i = 0;
+    while i < 10 {
+        print(fibonacci(i));
+        i = i + 1;
+    }
+    return 0;
+}
+*/
+
+// Example 4: Prime number check
+/*
+func is_prime(n) {
+    if n <= 1 {
+        return 0;
+    }
+    let i = 2;
+    while i * i <= n {
+        if n % i == 0 {
+            return 0;
+        }
+        i = i + 1;
+    }
+    return 1;
+}
+
+func main() {
+    let num = 17;
+    if is_prime(num) {
+        print(1);
+    } else {
+        print(0);
+    }
+    return 0;
+}
+*/
+
+// Example 5: Sum of numbers
+/*
+func sum_up_to(n) {
+    let sum = 0;
+    let i = 1;
+    while i <= n {
+        sum = sum + i;
+        i = i + 1;
+    }
+    return sum;
+}
+
+func main() {
+    let result = sum_up_to(100);
+    print(result);
+    return result;
+}
+*/
+
+// Example 6: Complex conditions
+/*
+func max(a, b) {
+    if a > b {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+func min(a, b) {
+    if a < b {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+func main() {
+    let x = 42;
+    let y = 17;
+    let maximum = max(x, y);
+    let minimum = min(x, y);
+    print(maximum);
+    print(minimum);
+    return maximum - minimum;
+}
+*/
+
+// Example 7: Nested loops
+/*
+func main() {
+    let i = 0;
+    while i < 3 {
+        let j = 0;
+        while j < 3 {
+            let product = i * 10 + j;
+            print(product);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+    return 0;
+}
+*/
+
+// Example 8: All operators test
+/*
+func main() {
+    let a = 10;
+    let b = 3;
+    
+    print(a + b);   // 13
+    print(a - b);   // 7
+    print(a * b);   // 30
+    print(a / b);   // 3
+    print(a % b);   // 1
+    
+    if a > b && a != b {
+        print(1);
+    }
+    
+    if !(a < b) || a >= b {
+        print(1);
+    }
+    
+    return 0;
+}
+*/
