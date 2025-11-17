@@ -1,7 +1,7 @@
-use crate::ast::*;
+use crate::ast;
 use cranelift::prelude::*;
 use cranelift_jit::{JITBuilder, JITModule};
-use cranelift_module::{DataContext, FuncId, Linkage, Module};
+use cranelift_module::{FuncId, Linkage, Module};
 use std::collections::HashMap;
 
 pub struct CodeGenerator {
@@ -46,7 +46,7 @@ impl CodeGenerator {
         }
     }
     
-    pub fn compile(&mut self, program: &Program) -> Result<*const u8, String> {
+    pub fn compile(&mut self, program: &ast::Program) -> Result<*const u8, String> {
         // First pass: declare all functions
         for func in &program.functions {
             self.declare_function(&func.name, func.params.len())?;
@@ -89,7 +89,7 @@ impl CodeGenerator {
         Ok(())
     }
     
-    fn compile_function(&mut self, func: &Function) -> Result<(), String> {
+    fn compile_function(&mut self, func: &ast::Function) -> Result<(), String> {
         // Reset variable tracking
         self.variables.clear();
         self.variable_counter = 0;
@@ -144,7 +144,7 @@ impl CodeGenerator {
     fn compile_block(
         &mut self,
         builder: &mut FunctionBuilder,
-        block: &Block,
+        block: &ast::Block,
     ) -> Result<Option<Value>, String> {
         let mut last_return = None;
         
@@ -160,10 +160,10 @@ impl CodeGenerator {
     fn compile_statement(
         &mut self,
         builder: &mut FunctionBuilder,
-        stmt: &Statement,
+        stmt: &ast::Statement,
     ) -> Result<Option<Value>, String> {
         match stmt {
-            Statement::VarDecl { name, value } => {
+            ast::Statement::VarDecl { name, value } => {
                 let val = self.compile_expr(builder, value)?;
                 
                 let var = Variable::new(self.variable_counter);
@@ -176,14 +176,14 @@ impl CodeGenerator {
                 Ok(None)
             }
             
-            Statement::Assignment { name, value } => {
+            ast::Statement::Assignment { name, value } => {
                 let val = self.compile_expr(builder, value)?;
                 let var = *self.variables.get(name).unwrap();
                 builder.def_var(var, val);
                 Ok(None)
             }
             
-            Statement::If {
+            ast::Statement::If {
                 condition,
                 then_block,
                 else_block,
@@ -217,7 +217,7 @@ impl CodeGenerator {
                 Ok(None)
             }
             
-            Statement::While { condition, body } => {
+            ast::Statement::While { condition, body } => {
                 let header_bb = builder.create_block();
                 let loop_body_bb = builder.create_block();
                 let exit_bb = builder.create_block();
@@ -245,12 +245,12 @@ impl CodeGenerator {
                 Ok(None)
             }
             
-            Statement::Return { value } => {
+            ast::Statement::Return { value } => {
                 let val = self.compile_expr(builder, value)?;
                 Ok(Some(val))
             }
             
-            Statement::ExprStmt { expr } => {
+            ast::Statement::ExprStmt { expr } => {
                 self.compile_expr(builder, expr)?;
                 Ok(None)
             }
@@ -260,84 +260,84 @@ impl CodeGenerator {
     fn compile_expr(
         &mut self,
         builder: &mut FunctionBuilder,
-        expr: &Expr,
+        expr: &ast::Expr,
     ) -> Result<Value, String> {
         match expr {
-            Expr::Number(n) => Ok(builder.ins().iconst(types::I64, *n)),
+            ast::Expr::Number(n) => Ok(builder.ins().iconst(types::I64, *n)),
             
-            Expr::Variable(name) => {
+            ast::Expr::Variable(name) => {
                 let var = *self.variables.get(name).unwrap();
                 Ok(builder.use_var(var))
             }
             
-            Expr::Binary { op, left, right } => {
+            ast::Expr::Binary { op, left, right } => {
                 let lhs = self.compile_expr(builder, left)?;
                 let rhs = self.compile_expr(builder, right)?;
                 
                 let result = match op {
-                    BinOp::Add => builder.ins().iadd(lhs, rhs),
-                    BinOp::Sub => builder.ins().isub(lhs, rhs),
-                    BinOp::Mul => builder.ins().imul(lhs, rhs),
-                    BinOp::Div => builder.ins().sdiv(lhs, rhs),
-                    BinOp::Mod => builder.ins().srem(lhs, rhs),
+                    ast::BinOp::Add => builder.ins().iadd(lhs, rhs),
+                    ast::BinOp::Sub => builder.ins().isub(lhs, rhs),
+                    ast::BinOp::Mul => builder.ins().imul(lhs, rhs),
+                    ast::BinOp::Div => builder.ins().sdiv(lhs, rhs),
+                    ast::BinOp::Mod => builder.ins().srem(lhs, rhs),
                     
-                    BinOp::Lt => {
+                    ast::BinOp::Lt => {
                         let cmp = builder.ins().icmp(IntCC::SignedLessThan, lhs, rhs);
-                        builder.ins().bint(types::I64, cmp)
+                        builder.ins().uextend(types::I64, cmp)
                     }
-                    BinOp::Le => {
+                    ast::BinOp::Le => {
                         let cmp = builder.ins().icmp(IntCC::SignedLessThanOrEqual, lhs, rhs);
-                        builder.ins().bint(types::I64, cmp)
+                        builder.ins().uextend(types::I64, cmp)
                     }
-                    BinOp::Gt => {
+                    ast::BinOp::Gt => {
                         let cmp = builder.ins().icmp(IntCC::SignedGreaterThan, lhs, rhs);
-                        builder.ins().bint(types::I64, cmp)
+                        builder.ins().uextend(types::I64, cmp)
                     }
-                    BinOp::Ge => {
+                    ast::BinOp::Ge => {
                         let cmp = builder.ins().icmp(IntCC::SignedGreaterThanOrEqual, lhs, rhs);
-                        builder.ins().bint(types::I64, cmp)
+                        builder.ins().uextend(types::I64, cmp)
                     }
-                    BinOp::Eq => {
+                    ast::BinOp::Eq => {
                         let cmp = builder.ins().icmp(IntCC::Equal, lhs, rhs);
-                        builder.ins().bint(types::I64, cmp)
+                        builder.ins().uextend(types::I64, cmp)
                     }
-                    BinOp::Ne => {
+                    ast::BinOp::Ne => {
                         let cmp = builder.ins().icmp(IntCC::NotEqual, lhs, rhs);
-                        builder.ins().bint(types::I64, cmp)
+                        builder.ins().uextend(types::I64, cmp)
                     }
                     
-                    BinOp::And => {
+                    ast::BinOp::And => {
                         let lhs_bool = builder.ins().icmp_imm(IntCC::NotEqual, lhs, 0);
                         let rhs_bool = builder.ins().icmp_imm(IntCC::NotEqual, rhs, 0);
                         let result = builder.ins().band(lhs_bool, rhs_bool);
-                        builder.ins().bint(types::I64, result)
+                        builder.ins().uextend(types::I64, result)
                     }
-                    BinOp::Or => {
+                    ast::BinOp::Or => {
                         let lhs_bool = builder.ins().icmp_imm(IntCC::NotEqual, lhs, 0);
                         let rhs_bool = builder.ins().icmp_imm(IntCC::NotEqual, rhs, 0);
                         let result = builder.ins().bor(lhs_bool, rhs_bool);
-                        builder.ins().bint(types::I64, result)
+                        builder.ins().uextend(types::I64, result)
                     }
                 };
                 
                 Ok(result)
             }
             
-            Expr::Unary { op, operand } => {
+            ast::Expr::Unary { op, operand } => {
                 let val = self.compile_expr(builder, operand)?;
                 
                 let result = match op {
-                    UnaryOp::Neg => builder.ins().ineg(val),
-                    UnaryOp::Not => {
+                    ast::UnaryOp::Neg => builder.ins().ineg(val),
+                    ast::UnaryOp::Not => {
                         let cmp = builder.ins().icmp_imm(IntCC::Equal, val, 0);
-                        builder.ins().bint(types::I64, cmp)
+                        builder.ins().uextend(types::I64, cmp)
                     }
                 };
                 
                 Ok(result)
             }
             
-            Expr::Call { name, args } => {
+            ast::Expr::Call { name, args } => {
                 // Handle builtin print
                 if name == "print" {
                     return self.compile_print_call(builder, &args[0]);
@@ -361,7 +361,7 @@ impl CodeGenerator {
     fn compile_print_call(
         &mut self,
         builder: &mut FunctionBuilder,
-        arg: &Expr,
+        arg: &ast::Expr,
     ) -> Result<Value, String> {
         let val = self.compile_expr(builder, arg)?;
         
